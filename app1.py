@@ -1,7 +1,6 @@
 # app.py
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import yfinance as yf
 import numpy as np
 from datetime import datetime, timedelta
@@ -25,11 +24,16 @@ def calculer_capital(montant, taux, duree, type_invest="Actions"):
     return pd.DataFrame(evolution, columns=["Année", "Capital accumulé"])
 
 # Fonction pour calculer la volatilité et la VaR
-def calculer_risque(historique, confidence_level=0.95):
-    rendements = historique.pct_change().dropna()
-    volatilite = rendements.std() * np.sqrt(252)  # Annualisée (252 jours de trading)
-    var = np.percentile(rendements, (1 - confidence_level) * 100)  # VaR historique
-    return volatilite, var
+def calculer_risque(historique):
+    try:
+        rendements = historique.pct_change().dropna()
+        if len(rendements) < 2:
+            return "N/A", "N/A"
+        volatilite = rendements.std() * np.sqrt(252)  # Annualisée
+        var = np.percentile(rendements, 5)  # VaR à 95%
+        return volatilite, var
+    except:
+        return "N/A", "N/A"
 
 # Section 1 : Calculateur d'Intérêts Composés
 if page == "Calculateur d'Intérêts":
@@ -49,14 +53,8 @@ if page == "Calculateur d'Intérêts":
         st.subheader("📈 Évolution du capital")
         st.dataframe(df.style.format({"Capital accumulé": "${:,.2f}"}))
 
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(df["Année"], df["Capital accumulé"], marker="o", linestyle="-", 
-                color="blue" if type_invest == "Actions" else "green")
-        ax.set_xlabel("Années")
-        ax.set_ylabel("Capital accumulé ($)")
-        ax.set_title(f"Évolution du Placement ({type_invest})")
-        ax.grid(True)
-        st.pyplot(fig)
+        # Graphique avec st.line_chart
+        st.line_chart(df.set_index("Année")["Capital accumulé"].rename(type_invest))
 
         total = df["Capital accumulé"].iloc[-1]
         st.success(f"Capital final après {annees} ans : ${total:,.2f}")
@@ -84,21 +82,23 @@ elif page == "Portefeuille":
         
         if submit and symbole:
             try:
-                actif = yf.Ticker(symbole)
-                prix_actuel = actif.history(period="1d")["Close"].iloc[-1]
+                actif = yf.Ticker(symbole.upper())
+                hist = actif.history(period="1d")
+                if hist.empty:
+                    raise ValueError("Aucune donnée disponible")
+                prix_actuel = hist["Close"].iloc[-1]
                 new_row = {"Actif": symbole.upper(), "Type": type_actif, "Quantité": quantite, 
                           "Prix Achat": prix_achat, "Valeur Actuelle": prix_actuel}
                 st.session_state.portefeuille = pd.concat([st.session_state.portefeuille, pd.DataFrame([new_row])], ignore_index=True)
-                st.success(f"{symbole} ajouté au portefeuille !")
-            except:
-                st.error("Erreur : Symbole invalide ou données indisponibles.")
+                st.success(f"{symbole.upper()} ajouté au portefeuille !")
+            except Exception as e:
+                st.error(f"Erreur : {str(e)}")
 
     if not st.session_state.portefeuille.empty:
         st.subheader("Composition du portefeuille")
         st.session_state.portefeuille["Valeur Totale"] = st.session_state.portefeuille["Quantité"] * st.session_state.portefeuille["Valeur Actuelle"]
         st.session_state.portefeuille["Profit/Perte"] = (st.session_state.portefeuille["Valeur Actuelle"] - st.session_state.portefeuille["Prix Achat"]) * st.session_state.portefeuille["Quantité"]
         
-        # Calcul du risque pour chaque actif
         risques = []
         for symbole in st.session_state.portefeuille["Actif"]:
             try:
@@ -108,19 +108,18 @@ elif page == "Portefeuille":
             except:
                 risques.append({"Volatilité (annuelle)": "N/A", "VaR (95%)": "N/A"})
         
-        risque_df = pd.DataFrame(risques, index=st.session_state.portefeuille["Actif"])
+        risque_df = pd.DataFrame(risques)
         portefeuille_complet = pd.concat([st.session_state.portefeuille, risque_df], axis=1)
         st.dataframe(portefeuille_complet.style.format({
             "Prix Achat": "${:.2f}", "Valeur Actuelle": "${:.2f}", 
             "Valeur Totale": "${:,.2f}", "Profit/Perte": "${:,.2f}",
-            "Volatilité (annuelle)": "{:.2%}", "VaR (95%)": "{:.2%}"
+            "Volatilité (annuelle)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x),
+            "VaR (95%)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x)
         }))
 
-        # Graphique de répartition
-        fig, ax = plt.subplots()
-        portefeuille_complet.groupby("Actif")["Valeur Totale"].sum().plot(kind="pie", ax=ax, autopct="%1.1f%%")
-        ax.set_title("Répartition du Portefeuille")
-        st.pyplot(fig)
+        # Graphique de répartition avec st.bar_chart
+        repartition = portefeuille_complet.groupby("Actif")["Valeur Totale"].sum()
+        st.bar_chart(repartition)
 
 # Section 3 : Watchlist
 elif page == "Watchlist":
@@ -142,37 +141,34 @@ elif page == "Watchlist":
             try:
                 actif = yf.Ticker(symbole)
                 hist = actif.history(period="1mo")
+                if hist.empty:
+                    raise ValueError("Aucune donnée disponible")
                 data[symbole] = hist["Close"].iloc[-1]
-                volatilite, var = calculer_risque(hist)
+                volatilite, var = calculer_risque(hist["Close"])
                 risques.append({"Volatilité (annuelle)": volatilite, "VaR (95%)": var})
             except:
                 data[symbole] = "N/A"
                 risques.append({"Volatilité (annuelle)": "N/A", "VaR (95%)": "N/A"})
         
         watch_df = pd.DataFrame(list(data.items()), columns=["Symbole", "Prix Actuel"])
-        risque_df = pd.DataFrame(risques, index=st.session_state.watchlist)
+        risque_df = pd.DataFrame(risques)
         watch_complet = pd.concat([watch_df, risque_df], axis=1)
         st.dataframe(watch_complet.style.format({
-            "Prix Actuel": "${:.2f}", 
-            "Volatilité (annuelle)": "{:.2%}", 
-            "VaR (95%)": "{:.2%}"
+            "Prix Actuel": lambda x: "N/A" if x == "N/A" else "${:.2f}".format(x),
+            "Volatilité (annuelle)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x),
+            "VaR (95%)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x)
         }))
         
-        # Graphique des performances
-        fig, ax = plt.subplots(figsize=(10, 6))
+        # Graphique avec st.line_chart
+        watch_data = pd.DataFrame()
         for symbole in st.session_state.watchlist:
             try:
-                actif = yf.Ticker(symbole)
-                hist = actif.history(period="1mo")
-                ax.plot(hist.index, hist["Close"], label=symbole)
+                hist = yf.Ticker(symbole).history(period="1mo")["Close"]
+                watch_data[symbole] = hist
             except:
                 pass
-        ax.set_title("Performance Watchlist (1 mois)")
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Prix ($)")
-        ax.legend()
-        ax.grid(True)
-        st.pyplot(fig)
+        if not watch_data.empty:
+            st.line_chart(watch_data)
 
 # Section 4 : Informations Financières
 elif page == "Informations Financières":
@@ -195,24 +191,18 @@ elif page == "Informations Financières":
                 st.write(f"**Dividende** : {info.get('dividendYield', 0) * 100:.2f}%")
                 st.write(f"**52 semaines** : ${info.get('fiftyTwoWeekLow', 0):.2f} - ${info.get('fiftyTwoWeekHigh', 0):.2f}")
             
-            # Calcul du risque
             hist = actif.history(period="1y")
-            volatilite, var = calculer_risque(hist)
-            st.write(f"**Volatilité (annuelle)** : {volatilite:.2%}")
-            st.write(f"**VaR (95%)** : {var:.2%} (perte potentielle max sur 1 jour avec 95% de confiance)")
+            if not hist.empty:
+                volatilite, var = calculer_risque(hist["Close"])
+                st.write(f"**Volatilité (annuelle)** : {'N/A' if volatilite == 'N/A' else f'{volatilite:.2%}'}")
+                st.write(f"**VaR (95%)** : {'N/A' if var == 'N/A' else f'{var:.2%}'} (perte potentielle max sur 1 jour)")
             
-            # Graphique historique
             periode = st.selectbox("Période", ["1mo", "6mo", "1y", "5y"])
             hist = actif.history(period=periode)
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.plot(hist.index, hist["Close"], color="purple")
-            ax.set_title(f"Historique {symbole.upper()} ({periode})")
-            ax.set_xlabel("Date")
-            ax.set_ylabel("Prix ($)")
-            ax.grid(True)
-            st.pyplot(fig)
-        except:
-            st.error("Symbole invalide ou données indisponibles.")
+            if not hist.empty:
+                st.line_chart(hist["Close"].rename(f"Historique {symbole.upper()} ({periode})"))
+        except Exception as e:
+            st.error(f"Erreur : {str(e)}")
 
 # Footer
 st.sidebar.markdown("---")
