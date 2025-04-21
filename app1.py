@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
 import numpy as np
-from fpdf import FPDF
 
 # Configuration de la page Streamlit
 st.set_page_config(page_title="Conseiller Financier Virtuel", layout="wide")
