@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import yfinance as yf
 
 st.set_page_config(page_title="Conseiller Financier Virtuel", layout="wide")
 
@@ -12,6 +13,7 @@ tabs = st.tabs([
     "Suggestions de Portefeuille",
     "Simulateur de Rendement",
     "Comparateur de Fonds",
+    "Recherche d'Actions",
     "FAQ",
     "Analyse Technique",
     "Glossaire"
@@ -113,9 +115,29 @@ with tabs[3]:
     st.json(donnees_fonds[fond2])
 
 # ------------------------
-# 5. FAQ
+# 5. RECHERCHE D'ACTIONS
 # ------------------------
 with tabs[4]:
+    st.header("📊 Recherche d'Actions")
+    ticker = st.text_input("Entrez le symbole boursier (ex: AAPL, TSLA, MSFT)")
+    if ticker:
+        try:
+            data = yf.Ticker(ticker)
+            info = data.info
+            st.subheader(info.get("longName", ticker))
+            st.write(f"📈 Prix actuel: ${info.get('currentPrice', 'N/A')}")
+            st.write(f"🏢 Secteur: {info.get('sector', 'N/A')}")
+            st.write(f"📊 Capitalisation boursière: {info.get('marketCap', 'N/A')}")
+            st.write(f"📅 Date de création: {info.get('fundFamily', 'N/A')}")
+            st.write(f"💰 Dividende: {info.get('dividendYield', 'N/A')}")
+            st.write(f"🔍 Description: {info.get('longBusinessSummary', 'N/A')}")
+        except Exception as e:
+            st.error("Erreur lors de la récupération des données. Vérifiez le symbole.")
+
+# ------------------------
+# 6. FAQ
+# ------------------------
+with tabs[5]:
     st.header("❓ Questions fréquentes")
     with st.expander("C'est quoi un ETF?"):
         st.write("Un ETF (Exchange Traded Fund) est un fonds qui regroupe plusieurs actifs, comme des actions ou des obligations, et qui se transige en bourse comme une action.")
@@ -130,16 +152,16 @@ with tabs[4]:
         st.write("Oui, avant d’investir à long terme, il est important d’avoir un coussin d’épargne équivalent à 3 à 6 mois de dépenses.")
 
 # ------------------------
-# 6. ANALYSE TECHNIQUE
+# 7. ANALYSE TECHNIQUE
 # ------------------------
-with tabs[5]:
+with tabs[6]:
     st.header("📉 Analyse Technique (à venir)")
     st.info("Cette section permettra d'ajouter vos propres analyses à partir de données boursières historiques.")
 
 # ------------------------
-# 7. GLOSSAIRE
+# 8. GLOSSAIRE
 # ------------------------
-with tabs[6]:
+with tabs[7]:
     st.header("📘 Glossaire Financier")
     st.markdown("Voici quelques termes importants pour mieux comprendre la finance :")
     st.write("**ETF** : Fonds négocié en bourse, panier d'actifs transigé comme une action.")
