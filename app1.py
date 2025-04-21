@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import yfinance as yf
+yimport yfinance as yf
 
 st.set_page_config(page_title="Conseiller Financier Virtuel", layout="wide")
 
@@ -169,3 +169,133 @@ with tabs[7]:
     st.write("**Diversification** : Répartition des investissements pour limiter les risques.")
     st.write("**Rendement** : Gain ou perte générée par un investissement sur une période donnée.")
     st.write("**Frais de gestion** : Coûts annuels prélevés par un fonds, exprimés en pourcentage.")
+
+# Watchlist d'actions
+with tabs[7]:
+    st.header("📝 Ma Watchlist")
+    watchlist = st.text_area("Ajouter des actions à suivre (séparées par des virgules)", "")
+    if watchlist:
+        actions = [action.strip() for action in watchlist.split(",")]
+        st.write("### Liste de suivi :")
+        st.write(", ".join(actions))
+
+import numpy as np
+
+# Simulation Monte Carlo
+with tabs[8]:
+    st.header("🔮 Simulation Monte Carlo")
+    st.markdown("Simulez des rendements futurs pour vos investissements.")
+
+    num_simulations = st.number_input("Nombre de simulations", min_value=100, max_value=10000, value=1000)
+    volatilite = st.slider("Volatilité (%)", min_value=1, max_value=50, value=20)
+    rendement_moyen = st.slider("Rendement moyen annuel (%)", min_value=1, max_value=20, value=8)
+
+    simulation_results = []
+
+    for _ in range(num_simulations):
+        # Simuler le rendement
+        capital_final = capital
+        historique_simulation = [capital]
+        for annee in range(duree):
+            rendement = np.random.normal(rendement_moyen / 100, volatilite / 100)
+            capital_final *= (1 + rendement)
+            historique_simulation.append(capital_final)
+        simulation_results.append(historique_simulation)
+
+    # Visualiser les résultats
+    for simulation in simulation_results:
+        st.line_chart(simulation)
+
+from fbprophet import Prophet
+import pandas as pd
+
+# Prévisions avec Prophet
+with tabs[9]:
+    st.header("🔮 Prévisions avec Prophet")
+    st.markdown("Prédisez les rendements futurs basés sur les données historiques.")
+
+    # Exemple de données historiques (date et valeur)
+    # Pour de vrais cas, vous pouvez charger des données financières réelles
+    data = {
+        'ds': pd.date_range(start='2020-01-01', periods=365, freq='D'),
+        'y': np.random.normal(0, 1, 365).cumsum()  # Données aléatoires pour l'exemple
+    }
+    df = pd.DataFrame(data)
+
+    # Modélisation avec Prophet
+    model = Prophet()
+    model.fit(df)
+    future = model.make_future_dataframe(df, periods=365)
+    forecast = model.predict(future)
+
+    # Visualisation des prévisions
+    fig = model.plot(forecast)
+    st.pyplot(fig)
+
+from fpdf import FPDF
+
+# Génération de rapport PDF
+with tabs[10]:
+    st.header("📄 Générer un rapport PDF")
+    if submitted:
+        st.markdown("Téléchargez votre profil financier en format PDF.")
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        for key, value in profil_data.items():
+            pdf.cell(200, 10, txt=f"{key}: {value}", ln=True)
+
+        # Sauvegarder le PDF dans un fichier
+        pdf_output = "/mnt/data/profil_financier.pdf"
+        pdf.output(pdf_output)
+
+        st.download_button(
+            label="Télécharger le rapport PDF",
+            data=open(pdf_output, "rb"),
+            file_name="profil_financier.pdf",
+            mime="application/pdf"
+        )
+
+# 12. QUIZ FINANCIER
+with tabs[11]:
+    st.header("🧠 Quiz Financier")
+    question = "Quel est l'objectif principal de la diversification ?"
+    options = ["Maximiser les rendements", "Minimiser les risques", "Augmenter les frais"]
+    
+    # Affichage des options sous forme de bouton radio
+    response = st.radio(question, options)
+
+    if response:
+        if response == "Minimiser les risques":
+            st.success("Bonne réponse! La diversification permet de réduire les risques en répartissant les investissements.")
+        else:
+            st.error("Mauvaise réponse. L'objectif principal de la diversification est de minimiser les risques.")
+
+# Cryptomonnaie
+with tabs[12]:
+    st.header("💰 Cryptomonnaie")
+    st.write("""
+    La cryptomonnaie est une monnaie numérique qui utilise la cryptographie pour sécuriser les transactions. 
+    Certaines des cryptomonnaies les plus populaires sont le Bitcoin (BTC), l'Ethereum (ETH), et le Litecoin (LTC).
+    """)
+
+    st.write("**Bitcoin (BTC)** : La première et la plus célèbre des cryptomonnaies.")
+    st.write("**Ethereum (ETH)** : Une plateforme décentralisée pour construire des applications sur blockchain.")
+    st.write("**Litecoin (LTC)** : Une alternative à Bitcoin avec un temps de transaction plus rapide.")
+
+tabs = st.tabs([
+    "Profil Financier",
+    "Suggestions de Portefeuille",
+    "Simulateur de Rendement",
+    "Comparateur de Fonds",
+    "FAQ",
+    "Analyse Technique",
+    "Glossaire",
+    "Watchlist",
+    "Simulation Monte Carlo",
+    "Prévisions avec Prophet",
+    "Générer un rapport PDF",
+    "Quiz Financier",
+    "Cryptomonnaie"
+])
