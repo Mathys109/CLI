@@ -218,28 +218,6 @@ data = {
 }
 df = pd.DataFrame(data)
 
-# Génération de rapport PDF
-with tabs[11]:
-    st.header("📄 Générer un rapport PDF")
-    if submitted:
-        st.markdown("Téléchargez votre profil financier en format PDF.")
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-
-        for key, value in {"Âge": age, "Objectif": objectif}.items():
-            pdf.cell(200, 10, txt=f"{key}: {value}", ln=True)
-
-        # Sauvegarder le PDF dans un fichier
-        pdf_output = "/mnt/data/profil_financier.pdf"
-        pdf.output(pdf_output)
-
-        st.download_button(
-            label="Télécharger le rapport PDF",
-            data=open(pdf_output, "rb"),
-            file_name="profil_financier.pdf",
-            mime="application/pdf"
-        )
 
 # 12. QUIZ FINANCIER
 with tabs[12]:
