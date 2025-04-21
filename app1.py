@@ -4,6 +4,7 @@ import pandas as pd
 import yfinance as yf
 import numpy as np
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
 
 # Configuration de la page
 st.set_page_config(page_title="Gestion Financière", layout="wide")
@@ -11,7 +12,7 @@ st.set_page_config(page_title="Gestion Financière", layout="wide")
 # Menu latéral
 st.sidebar.header("Navigation")
 page = st.sidebar.selectbox("Choisir une section", 
-                           ["Calculateur d'Intérêts", "Portefeuille", "Watchlist", "Informations Financières"])
+                           ["Calculateur d'Intérêts", "Portefeuille", "Watchlist", "Informations Financières", "Profil Financier"])
 
 # Fonction pour calculer les intérêts composés
 def calculer_capital(montant, taux, duree, type_invest="Actions"):
@@ -35,10 +36,59 @@ def calculer_risque(historique):
     except:
         return "N/A", "N/A"
 
+# Fonction pour rechercher un symbole depuis un nom
+@st.cache_data
+def trouver_symbole(nom_ou_symbole):
+    nom_ou_symbole = nom_ou_symbole.strip().upper()
+    if len(nom_ou_symbole) <= 5:
+        return nom_ou_symbole  # Probablement un symbole
+    try:
+        recherche = yf.Ticker(nom_ou_symbole)
+        if recherche:
+            return nom_ou_symbole
+    except:
+        pass
+    return nom_ou_symbole
+
+# Suggestions d'actifs populaires
+suggestions = ["AAPL", "MSFT", "TSLA", "GOOGL", "AMZN", "VTI", "SPY", "XIC.TO", "QQQ"]
+
+# Création du Profil Financier
+def creer_profil():
+    st.title("📝 Profil Financier")
+
+    age = st.number_input("Quel est votre âge ?", min_value=18, max_value=100, value=30, step=1)
+    but = st.selectbox("Quel est votre objectif d'investissement ?", ["Retraite", "Achat immobilier", "Éducation", "Autre"])
+    horizon_temps = st.selectbox("Quel est votre horizon d'investissement ?", ["Moins de 1 an", "1 à 5 ans", "5 ans et plus"])
+    risque = st.selectbox("Quelle est votre tolérance au risque ?", ["Faible", "Modéré", "Élevé"])
+    montant = st.number_input("Combien souhaitez-vous investir en $ ?", min_value=100, value=1000, step=100)
+
+    # Calculer le profil en fonction des réponses
+    if st.button("Obtenir des suggestions"):
+        # Exemple de logique de suggestion
+        suggestions = []
+        if risque == "Faible":
+            suggestions.append("ETF Obligations")
+            if horizon_temps == "5 ans et plus":
+                suggestions.append("ETF Actions de dividendes")
+        elif risque == "Modéré":
+            suggestions.append("ETF large marché")
+            if horizon_temps == "5 ans et plus":
+                suggestions.append("Actions de grandes entreprises")
+        else:
+            suggestions.append("Actions de croissance")
+            if horizon_temps == "5 ans et plus":
+                suggestions.append("Technologie")
+        
+        # Affichage des suggestions
+        st.subheader("💡 Suggestions d'investissement basées sur votre profil :")
+        for suggestion in suggestions:
+            st.write(f"- {suggestion}")
+
 # Section 1 : Calculateur d'Intérêts Composés
 if page == "Calculateur d'Intérêts":
     st.title("💰 Calculateur de Placement et Intérêts Composés")
-    
+
     col1, col2 = st.columns(2)
     with col1:
         montant_annuel = st.number_input("Montant investi par an ($)", min_value=0.0, value=1000.0, step=100.0)
@@ -49,161 +99,119 @@ if page == "Calculateur d'Intérêts":
 
     if st.button("Calculer"):
         df = calculer_capital(montant_annuel, taux_interet, annees, type_invest)
-        
+
         st.subheader("📈 Évolution du capital")
         st.dataframe(df.style.format({"Capital accumulé": "${:,.2f}"}))
 
-        # Graphique avec st.line_chart
         st.line_chart(df.set_index("Année")["Capital accumulé"].rename(type_invest))
 
         total = df["Capital accumulé"].iloc[-1]
         st.success(f"Capital final après {annees} ans : ${total:,.2f}")
-        
+
         csv = df.to_csv(index=False)
         st.download_button("Télécharger les données", csv, "evolution_capital.csv", "text/csv")
 
 # Section 2 : Portefeuille
 elif page == "Portefeuille":
     st.title("📊 Mon Portefeuille")
-    
+
     if "portefeuille" not in st.session_state:
         st.session_state.portefeuille = pd.DataFrame(columns=["Actif", "Type", "Quantité", "Prix Achat", "Valeur Actuelle"])
-    
+
     with st.form(key="ajout_actif"):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            symbole = st.text_input("Symbole (ex: AAPL, TSLA)")
-            quantite = st.number_input("Quantité", min_value=0.0, step=1.0)
-        with col2:
-            type_actif = st.selectbox("Type", ["Actions", "Obligations"])
-            prix_achat = st.number_input("Prix d'achat ($)", min_value=0.0, step=0.1)
-        with col3:
-            submit = st.form_submit_button("Ajouter")
-        
-        if submit and symbole:
+        recherche = st.text_input("Nom ou symbole du placement")
+        quantite = st.number_input("Quantité", min_value=0.0, step=1.0)
+        bouton_ajouter = st.form_submit_button("Ajouter")
+
+        if bouton_ajouter and recherche:
             try:
-                actif = yf.Ticker(symbole.upper())
+                symbole_final = recherche.strip().upper()
+                actif = yf.Ticker(symbole_final)
+                info = actif.info
                 hist = actif.history(period="1d")
                 if hist.empty:
                     raise ValueError("Aucune donnée disponible")
                 prix_actuel = hist["Close"].iloc[-1]
-                new_row = {"Actif": symbole.upper(), "Type": type_actif, "Quantité": quantite, 
-                          "Prix Achat": prix_achat, "Valeur Actuelle": prix_actuel}
+                prix_achat = prix_actuel
+                secteur = info.get("sector", "")
+                if "ETF" in info.get("quoteType", "").upper() or "ETF" in info.get("longName", "").upper():
+                    type_actif = "FNB"
+                elif secteur == "Financial Services" or "BOND" in info.get("longName", "").upper():
+                    type_actif = "Obligations"
+                else:
+                    type_actif = "Actions"
+                new_row = {"Actif": symbole_final, "Type": type_actif, "Quantité": quantite, "Prix Achat": prix_achat, "Valeur Actuelle": prix_actuel}
                 st.session_state.portefeuille = pd.concat([st.session_state.portefeuille, pd.DataFrame([new_row])], ignore_index=True)
-                st.success(f"{symbole.upper()} ajouté au portefeuille !")
+                st.success(f"{symbole_final} ajouté au portefeuille !")
             except Exception as e:
                 st.error(f"Erreur : {str(e)}")
 
     if not st.session_state.portefeuille.empty:
-        st.subheader("Composition du portefeuille")
+        st.subheader("📈 Composition du portefeuille")
+
+        if st.button("🔄 Mettre à jour les données"):
+            for i, row in st.session_state.portefeuille.iterrows():
+                try:
+                    hist = yf.Ticker(row["Actif"]).history(period="1d")
+                    if not hist.empty:
+                        st.session_state.portefeuille.at[i, "Valeur Actuelle"] = hist["Close"].iloc[-1]
+                except:
+                    pass
+
         st.session_state.portefeuille["Valeur Totale"] = st.session_state.portefeuille["Quantité"] * st.session_state.portefeuille["Valeur Actuelle"]
         st.session_state.portefeuille["Profit/Perte"] = (st.session_state.portefeuille["Valeur Actuelle"] - st.session_state.portefeuille["Prix Achat"]) * st.session_state.portefeuille["Quantité"]
-        
-        risques = []
-        for symbole in st.session_state.portefeuille["Actif"]:
-            try:
-                hist = yf.Ticker(symbole).history(period="1y")["Close"]
-                volatilite, var = calculer_risque(hist)
-                risques.append({"Volatilité (annuelle)": volatilite, "VaR (95%)": var})
-            except:
-                risques.append({"Volatilité (annuelle)": "N/A", "VaR (95%)": "N/A"})
-        
-        risque_df = pd.DataFrame(risques)
-        portefeuille_complet = pd.concat([st.session_state.portefeuille, risque_df], axis=1)
-        st.dataframe(portefeuille_complet.style.format({
-            "Prix Achat": "${:.2f}", "Valeur Actuelle": "${:.2f}", 
-            "Valeur Totale": "${:,.2f}", "Profit/Perte": "${:,.2f}",
-            "Volatilité (annuelle)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x),
-            "VaR (95%)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x)
-        }))
 
-        # Graphique de répartition avec st.bar_chart
-        repartition = portefeuille_complet.groupby("Actif")["Valeur Totale"].sum()
-        st.bar_chart(repartition)
+        st.dataframe(st.session_state.portefeuille.style.format({
+            "Prix Achat": "${:.2f}", "Valeur Actuelle": "${:.2f}",
+            "Valeur Totale": "${:,.2f}", "Profit/Perte": "${:,.2f}"
+        }))
 
 # Section 3 : Watchlist
 elif page == "Watchlist":
     st.title("👀 Ma Watchlist")
-    
+
     if "watchlist" not in st.session_state:
         st.session_state.watchlist = []
-    
+
     symbole = st.text_input("Ajouter un symbole à la watchlist (ex: AAPL)")
     if st.button("Ajouter") and symbole:
         st.session_state.watchlist.append(symbole.upper())
         st.success(f"{symbole.upper()} ajouté à la watchlist !")
-    
+
     if st.session_state.watchlist:
         st.subheader("Ma Watchlist")
         data = {}
         risques = []
-        for symbole in st.session_state.watchlist:
+        for sym in st.session_state.watchlist:
             try:
-                actif = yf.Ticker(symbole)
-                hist = actif.history(period="1mo")
-                if hist.empty:
-                    raise ValueError("Aucune donnée disponible")
-                data[symbole] = hist["Close"].iloc[-1]
-                volatilite, var = calculer_risque(hist["Close"])
-                risques.append({"Volatilité (annuelle)": volatilite, "VaR (95%)": var})
-            except:
-                data[symbole] = "N/A"
-                risques.append({"Volatilité (annuelle)": "N/A", "VaR (95%)": "N/A"})
-        
-        watch_df = pd.DataFrame(list(data.items()), columns=["Symbole", "Prix Actuel"])
-        risque_df = pd.DataFrame(risques)
-        watch_complet = pd.concat([watch_df, risque_df], axis=1)
-        st.dataframe(watch_complet.style.format({
-            "Prix Actuel": lambda x: "N/A" if x == "N/A" else "${:.2f}".format(x),
-            "Volatilité (annuelle)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x),
-            "VaR (95%)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x)
-        }))
-        
-        # Graphique avec st.line_chart
-        watch_data = pd.DataFrame()
-        for symbole in st.session_state.watchlist:
-            try:
-                hist = yf.Ticker(symbole).history(period="1mo")["Close"]
-                watch_data[symbole] = hist
+                actif = yf.Ticker(sym)
+                info = actif.info
+                hist = actif.history(period="1d")
+                if not hist.empty:
+                    data[sym] = hist["Close"].iloc[-1]
+                    volatilite, var = calculer_risque(hist)
+                    risques.append((sym, volatilite, var))
             except:
                 pass
-        if not watch_data.empty:
-            st.line_chart(watch_data)
+        st.write(data)
+        if risques:
+            st.write("Volatilité et VaR des actifs:")
+            for risk in risques:
+                st.write(f"{risk[0]} : Volatilité = {risk[1]}, VaR = {risk[2]}")
 
 # Section 4 : Informations Financières
 elif page == "Informations Financières":
-    st.title("ℹ️ Informations Financières")
-    
-    symbole = st.text_input("Entrez un symbole (ex: AAPL)")
-    if symbole:
-        try:
-            actif = yf.Ticker(symbole.upper())
-            info = actif.info
-            st.subheader(f"{info['longName']} ({symbole.upper()})")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Secteur** : {info.get('sector', 'N/A')}")
-                st.write(f"**Prix actuel** : ${info.get('currentPrice', 'N/A'):.2f}")
-                st.write(f"**Capitalisation** : ${info.get('marketCap', 0):,.0f}")
-            with col2:
-                st.write(f"**PER** : {info.get('trailingPE', 'N/A'):.2f}")
-                st.write(f"**Dividende** : {info.get('dividendYield', 0) * 100:.2f}%")
-                st.write(f"**52 semaines** : ${info.get('fiftyTwoWeekLow', 0):.2f} - ${info.get('fiftyTwoWeekHigh', 0):.2f}")
-            
-            hist = actif.history(period="1y")
-            if not hist.empty:
-                volatilite, var = calculer_risque(hist["Close"])
-                st.write(f"**Volatilité (annuelle)** : {'N/A' if volatilite == 'N/A' else f'{volatilite:.2%}'}")
-                st.write(f"**VaR (95%)** : {'N/A' if var == 'N/A' else f'{var:.2%}'} (perte potentielle max sur 1 jour)")
-            
-            periode = st.selectbox("Période", ["1mo", "6mo", "1y", "5y"])
-            hist = actif.history(period=periode)
-            if not hist.empty:
-                st.line_chart(hist["Close"].rename(f"Historique {symbole.upper()} ({periode})"))
-        except Exception as e:
-            st.error(f"Erreur : {str(e)}")
+    st.title("📚 Informations Financières")
+    st.write("### Qu'est-ce qu'un ETF ?")
+    st.write("""
+        Un ETF (Exchange Traded Fund) est un fonds d'investissement coté en bourse qui suit un indice, une matière première, un secteur, ou un groupe d'actifs. 
+        Il permet aux investisseurs d'obtenir une exposition diversifiée tout en ayant une liquidité élevée, étant donné qu'il peut être acheté et vendu comme une action.
+    """)
+    st.write("### Quelle est la différence entre une action et une obligation ?")
+    st.write("""
+        Une action représente une part de propriété dans une entreprise, tandis qu'une obligation est un instrument de dette où l'investisseur prête de l'argent à une entreprise ou un gouvernement en échange de paiements d'intérêts.
+    """)
 
-# Footer
-st.sidebar.markdown("---")
-st.sidebar.write(f"Date : {datetime.now().strftime('%Y-%m-%d')}")
+# Section 5 : Profil Financier
+elif page == "Profil Financier":
+    creer_profil()
