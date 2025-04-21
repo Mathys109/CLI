@@ -6,11 +6,22 @@ import numpy as np
 
 # Configuration de la page Streamlit
 st.set_page_config(page_title="Conseiller Financier Virtuel", layout="wide")
-
-# Titre de la page
 st.title("💼 Conseiller Financier Virtuel")
 
-# Onglets pour organiser l'application
+# Variables par défaut pour éviter les erreurs si le formulaire n'est pas soumis
+age = 30
+objectif = "Épargne retraite"
+montant_initial = 1000
+investissement_mensuel = 100
+duree = 10
+connaissance = "Débutant"
+risque = "Modérée"
+situation_familiale = "Célibataire"
+epargne_urgence = "Oui"
+preference_esg = False
+horizon_liquidite = "Non"
+
+# Onglets
 tabs = st.tabs([
     "Profil Financier",
     "Suggestions de Portefeuille",
@@ -26,9 +37,7 @@ tabs = st.tabs([
     "Cryptomonnaie"
 ])
 
-# ------------------------
-# 1. PROFIL FINANCIER
-# ------------------------
+# 1. Profil Financier
 with tabs[0]:
     st.header("📋 Profil Financier")
     with st.form("profil_form"):
@@ -66,9 +75,7 @@ with tabs[0]:
             "Besoin de liquidité court terme": horizon_liquidite
         })
 
-# ------------------------
-# 2. SUGGESTIONS DE PORTEFEUILLE
-# ------------------------
+# 2. Suggestions de Portefeuille
 with tabs[1]:
     st.header("📊 Suggestions de Portefeuille")
     st.markdown("Voici un exemple de répartition suggérée :")
@@ -86,9 +93,7 @@ with tabs[1]:
     ax.axis('equal')
     st.pyplot(fig)
 
-# ------------------------
-# 3. SIMULATEUR DE RENDEMENT
-# ------------------------
+# 3. Simulateur de Rendement
 with tabs[2]:
     st.header("📈 Simulateur de Rendement")
     taux = st.slider("Taux de rendement annuel (%)", 1, 15, 5)
@@ -101,9 +106,7 @@ with tabs[2]:
     st.line_chart(historique)
     st.metric("Montant estimé à terme", f"{capital:,.2f} $")
 
-# ------------------------
-# 4. COMPARATEUR DE FONDS
-# ------------------------
+# 4. Comparateur de Fonds
 with tabs[3]:
     st.header("🔍 Comparateur de Fonds")
     fond1 = st.selectbox("Choisir un premier fonds", ["VEQT", "XEQT", "VCNS", "VGRO"])
@@ -121,9 +124,7 @@ with tabs[3]:
     st.write(f"### 📌 {fond2}")
     st.json(donnees_fonds[fond2])
 
-# ------------------------
-# 5. RECHERCHE D'ACTIONS
-# ------------------------
+# 5. Recherche d'Actions
 with tabs[4]:
     st.header("📊 Recherche d'Actions")
     ticker = st.text_input("Entrez le symbole boursier (ex: AAPL, TSLA, MSFT)")
@@ -141,43 +142,33 @@ with tabs[4]:
         except Exception as e:
             st.error("Erreur lors de la récupération des données. Vérifiez le symbole.")
 
-# ------------------------
 # 6. FAQ
-# ------------------------
 with tabs[5]:
     st.header("❓ Questions fréquentes")
     with st.expander("C'est quoi un ETF?"):
         st.write("Un ETF (Exchange Traded Fund) est un fonds qui regroupe plusieurs actifs, comme des actions ou des obligations, et qui se transige en bourse comme une action.")
-
     with st.expander("Comment fonctionne le risque?"):
-        st.write("Plus le rendement espéré est élevé, plus le risque de pertes est grand. C’est pourquoi il faut bien connaître son profil d’investisseur.")
-
+        st.write("Plus le rendement espéré est élevé, plus le risque de pertes est grand.")
     with st.expander("À quelle fréquence investir?"):
-        st.write("Investir de manière périodique (ex: chaque mois) permet de réduire le risque en lissant les fluctuations du marché.")
-
+        st.write("Investir de manière périodique (ex: chaque mois) permet de réduire le risque.")
     with st.expander("Faut-il avoir une épargne d’urgence?"):
-        st.write("Oui, avant d’investir à long terme, il est important d’avoir un coussin d’épargne équivalent à 3 à 6 mois de dépenses.")
+        st.write("Oui, avant d’investir à long terme, il est important d’avoir un coussin de sécurité.")
 
-# ------------------------
-# 7. ANALYSE TECHNIQUE
-# ------------------------
+# 7. Analyse Technique
 with tabs[6]:
     st.header("📉 Analyse Technique (à venir)")
     st.info("Cette section permettra d'ajouter vos propres analyses à partir de données boursières historiques.")
 
-# ------------------------
-# 8. GLOSSAIRE
-# ------------------------
+# 8. Glossaire
 with tabs[7]:
     st.header("📘 Glossaire Financier")
-    st.markdown("Voici quelques termes importants pour mieux comprendre la finance :")
-    st.write("**ETF** : Fonds négocié en bourse, panier d'actifs transigé comme une action.")
-    st.write("**Fonds indiciel** : Fonds qui réplique la performance d'un indice (ex : S&P 500).")
-    st.write("**Diversification** : Répartition des investissements pour limiter les risques.")
-    st.write("**Rendement** : Gain ou perte générée par un investissement sur une période donnée.")
-    st.write("**Frais de gestion** : Coûts annuels prélevés par un fonds, exprimés en pourcentage.")
+    st.markdown("**ETF** : Fonds négocié en bourse, panier d'actifs transigé comme une action.")
+    st.markdown("**Fonds indiciel** : Réplique la performance d'un indice (ex : S&P 500).")
+    st.markdown("**Diversification** : Répartir ses placements pour limiter les risques.")
+    st.markdown("**Rendement** : Gain ou perte sur un investissement.")
+    st.markdown("**Frais de gestion** : Coûts annuels d'un fonds, en pourcentage.")
 
-# Watchlist d'actions
+# 9. Watchlist
 with tabs[8]:
     st.header("📝 Ma Watchlist")
     watchlist = st.text_area("Ajouter des actions à suivre (séparées par des virgules)", "")
@@ -186,7 +177,7 @@ with tabs[8]:
         st.write("### Liste de suivi :")
         st.write(", ".join(actions))
 
-# Simulation Monte Carlo
+# 10. Simulation Monte Carlo
 with tabs[9]:
     st.header("🔮 Simulation Monte Carlo")
     st.markdown("Simulez des rendements futurs pour vos investissements.")
@@ -196,51 +187,40 @@ with tabs[9]:
     rendement_moyen = st.slider("Rendement moyen annuel (%)", min_value=1, max_value=20, value=8)
 
     simulation_results = []
-
     for _ in range(num_simulations):
-        # Simuler le rendement
         capital_final = montant_initial
         historique_simulation = [capital_final]
-        for annee in range(duree):
+        for _ in range(duree):
             rendement = np.random.normal(rendement_moyen / 100, volatilite / 100)
             capital_final *= (1 + rendement)
             historique_simulation.append(capital_final)
         simulation_results.append(historique_simulation)
 
-    # Visualiser les résultats
-    for simulation in simulation_results:
-        st.line_chart(simulation)
+    fig, ax = plt.subplots()
+    for simulation in simulation_results[:50]:
+        ax.plot(simulation, alpha=0.3)
+    st.pyplot(fig)
 
-# Exemple de données historiques (date et valeur)
-data = {
-    'ds': pd.date_range(start='2020-01-01', periods=365, freq='D'),
-    'y': np.random.normal(0, 1, 365).cumsum()  # Données aléatoires pour l'exemple
-}
-df = pd.DataFrame(data)
-
-
-# 12. QUIZ FINANCIER
-with tabs[12]:
+# 11. Quiz Financier
+with tabs[10]:
     st.header("🧠 Quiz Financier")
     question = "Quel est l'objectif principal de la diversification ?"
     options = ["Maximiser les rendements", "Minimiser les risques", "Augmenter les frais"]
-    
     response = st.radio(question, options)
 
     if response:
         if response == "Minimiser les risques":
-            st.success("Bonne réponse! La diversification permet de réduire les risques en répartissant les investissements.")
+            st.success("Bonne réponse! La diversification réduit les risques.")
         else:
-            st.error("Mauvaise réponse. L'objectif principal de la diversification est de minimiser les risques.")
+            st.error("Mauvaise réponse. L'objectif est de **minimiser les risques**.")
 
-# Cryptomonnaie
-with tabs[13]:
+# 12. Cryptomonnaie
+with tabs[11]:
     st.header("💰 Cryptomonnaie")
     st.write("""
-    La cryptomonnaie est une monnaie numérique qui utilise la cryptographie pour sécuriser les transactions. 
-    Certaines des cryptomonnaies les plus populaires sont le Bitcoin (BTC), l'Ethereum (ETH), et le Litecoin (LTC).
+    La cryptomonnaie est une monnaie numérique sécurisée par cryptographie. 
+    Exemples populaires : Bitcoin (BTC), Ethereum (ETH), Litecoin (LTC).
     """)
-
     st.write("**Bitcoin (BTC)** : La première et la plus célèbre des cryptomonnaies.")
-    st.write("**Ethereum (ETH)** : Une plateforme décentralisée pour construire des applications sur blockchain.")
-    st.write("**Litecoin (LTC)** : Une alternative à Bitcoin avec un temps de transaction plus rapide.")
+    st.write("**Ethereum (ETH)** : Utilisé pour des applications décentralisées.")
+    st.write("**Litecoin (LTC)** : Une alternative plus rapide au Bitcoin.")
