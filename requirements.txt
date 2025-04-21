@@ -5,3 +5,4 @@ numpy
 matplotlib
 fbprophet
 prophet
+statsmodels.tsa.arima.model
