@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
 import numpy as np
-import prophet as Pt
+from statsmodels.tsa.arima.model import ARIMA
 from fpdf import FPDF
 
 # Configuration de la page Streamlit
@@ -215,27 +215,25 @@ with tabs[9]:
     for simulation in simulation_results:
         st.line_chart(simulation)
 
-# Prévisions avec Prophet
-with tabs[10]:
-    st.header("🔮 Prévisions avec Prophet")
-    st.markdown("Prédisez les rendements futurs basés sur les données historiques.")
+# Exemple de données historiques (date et valeur)
+data = {
+    'ds': pd.date_range(start='2020-01-01', periods=365, freq='D'),
+    'y': np.random.normal(0, 1, 365).cumsum()  # Données aléatoires pour l'exemple
+}
+df = pd.DataFrame(data)
 
-    # Exemple de données historiques (date et valeur)
-    data = {
-        'ds': pd.date_range(start='2020-01-01', periods=365, freq='D'),
-        'y': np.random.normal(0, 1, 365).cumsum()  # Données aléatoires pour l'exemple
-    }
-    df = pd.DataFrame(data)
+# Ajustement du modèle ARIMA
+model = ARIMA(df['y'], order=(5, 1, 0))  # (p, d, q)
+model_fit = model.fit()
 
-    # Modélisation avec Prophet
-    model = Pt()
-    model.fit(df)
-    future = model.make_future_dataframe(df, periods=365)
-    forecast = model.predict(future)
+# Prévisions
+forecast_steps = 365
+forecast = model_fit.forecast(steps=forecast_steps)
 
-    # Visualisation des prévisions
-    fig = model.plot(forecast)
-    st.pyplot(fig)
+# Visualisation des prévisions
+st.header("🔮 Prévisions avec ARIMA")
+st.write(f"Prévisions pour les {forecast_steps} prochains jours.")
+st.line_chart(forecast)
 
 # Génération de rapport PDF
 with tabs[11]:
