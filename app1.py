@@ -7,7 +7,15 @@ st.set_page_config(page_title="Conseiller Financier Virtuel", layout="wide")
 st.title("💼 Conseiller Financier Virtuel")
 
 # Onglets pour organiser l'application
-tabs = st.tabs(["Profil Financier", "Suggestions de Portefeuille", "Simulateur de Rendement", "Comparateur de Fonds", "FAQ"])
+tabs = st.tabs([
+    "Profil Financier",
+    "Suggestions de Portefeuille",
+    "Simulateur de Rendement",
+    "Comparateur de Fonds",
+    "FAQ",
+    "Analyse Technique",
+    "Glossaire"
+])
 
 # ------------------------
 # 1. PROFIL FINANCIER
@@ -22,11 +30,13 @@ with tabs[0]:
             montant_initial = st.number_input("Montant disponible à investir maintenant ($)", min_value=0)
             investissement_mensuel = st.number_input("Montant investi chaque mois ($)", min_value=0)
             duree = st.slider("Durée de l'investissement (en années)", 1, 50, 10)
+            connaissance = st.select_slider("Connaissances en finance", options=["Débutant", "Intermédiaire", "Avancé"])
         with col2:
             risque = st.select_slider("Tolérance au risque", options=["Faible", "Modérée", "Élevée"])
             situation_familiale = st.selectbox("Situation familiale", ["Célibataire", "Marié(e)", "Avec enfants", "Sans enfants"])
             epargne_urgence = st.radio("Avez-vous une épargne d'urgence?", ["Oui", "Non"])
             preference_esg = st.checkbox("Je préfère des investissements responsables (ESG)")
+            horizon_liquidite = st.radio("Avez-vous besoin de liquidité à court terme?", ["Oui", "Non"])
 
         submitted = st.form_submit_button("Analyser mon profil")
 
@@ -42,7 +52,9 @@ with tabs[0]:
             "Tolérance au risque": risque,
             "Situation familiale": situation_familiale,
             "Épargne d'urgence": epargne_urgence,
-            "Préférence ESG": preference_esg
+            "Préférence ESG": preference_esg,
+            "Connaissances financières": connaissance,
+            "Besoin de liquidité court terme": horizon_liquidite
         })
 
 # ------------------------
@@ -116,3 +128,22 @@ with tabs[4]:
 
     with st.expander("Faut-il avoir une épargne d’urgence?"):
         st.write("Oui, avant d’investir à long terme, il est important d’avoir un coussin d’épargne équivalent à 3 à 6 mois de dépenses.")
+
+# ------------------------
+# 6. ANALYSE TECHNIQUE
+# ------------------------
+with tabs[5]:
+    st.header("📉 Analyse Technique (à venir)")
+    st.info("Cette section permettra d'ajouter vos propres analyses à partir de données boursières historiques.")
+
+# ------------------------
+# 7. GLOSSAIRE
+# ------------------------
+with tabs[6]:
+    st.header("📘 Glossaire Financier")
+    st.markdown("Voici quelques termes importants pour mieux comprendre la finance :")
+    st.write("**ETF** : Fonds négocié en bourse, panier d'actifs transigé comme une action.")
+    st.write("**Fonds indiciel** : Fonds qui réplique la performance d'un indice (ex : S&P 500).")
+    st.write("**Diversification** : Répartition des investissements pour limiter les risques.")
+    st.write("**Rendement** : Gain ou perte générée par un investissement sur une période donnée.")
+    st.write("**Frais de gestion** : Coûts annuels prélevés par un fonds, exprimés en pourcentage.")
