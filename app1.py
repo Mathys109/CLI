@@ -224,3 +224,173 @@ with tabs[11]:
     st.write("**Bitcoin (BTC)** : La première et la plus célèbre des cryptomonnaies.")
     st.write("**Ethereum (ETH)** : Utilisé pour des applications décentralisées.")
     st.write("**Litecoin (LTC)** : Une alternative plus rapide au Bitcoin.")
+# ========== 🔧 Fonctions utilitaires ==========
+
+def evaluer_profil(age, risque, connaissance):
+    score = 0
+    if age < 35:
+        score += 1
+    if risque == "Élevée":
+        score += 2
+    elif risque == "Modérée":
+        score += 1
+    if connaissance == "Avancé":
+        score += 2
+    elif connaissance == "Intermédiaire":
+        score += 1
+    return score
+
+# ========== 🔄 Mise à jour du Simulateur de Rendement avec Altair ==========
+import altair as alt
+
+if "📈 Simulateur de Rendement" in [tab.label for tab in tabs]:
+    with tabs[2]:
+        st.subheader("📊 Graphique interactif")
+        df = pd.DataFrame({
+            "Année": list(range(1, duree+1)),
+            "Capital estimé ($)": historique
+        })
+        chart = alt.Chart(df).mark_line(point=True).encode(
+            x='Année:O',
+            y='Capital estimé ($):Q',
+            tooltip=['Année', 'Capital estimé ($)']
+        ).interactive()
+        st.altair_chart(chart, use_container_width=True)
+
+# ========== 🧮 Calculateur Retraite ==========
+
+tabs.append(st.tab("🧓 Planification Retraite"))
+with tabs[-1]:
+    st.header("🧓 Planification Retraite")
+    age_retraite = st.slider("À quel âge voulez-vous prendre votre retraite ?", 55, 70, 65)
+    revenus_voulus = st.number_input("Revenu annuel désiré à la retraite ($)", value=40000)
+    duree_retraite = 90 - age_retraite
+    inflation = st.slider("Inflation estimée (%)", 1, 5, 2)
+
+    besoin_total = 0
+    for i in range(duree_retraite):
+        besoin_total += revenus_voulus * ((1 + inflation/100) ** i)
+
+    st.success(f"📊 Vous aurez besoin d’environ **{besoin_total:,.0f} $** pour {duree_retraite} ans de retraite.")
+
+# ========== 🧠 Quiz amélioré aléatoire ==========
+if "🧠 Quiz Financier" in [tab.label for tab in tabs]:
+    with tabs[10]:
+        st.header("🧠 Quiz Financier Amélioré")
+        import random
+        questions = [
+            {"q": "Quel est l'objectif principal de la diversification ?", "r": "Minimiser les risques", "opts": ["Maximiser les rendements", "Minimiser les risques", "Augmenter les frais"]},
+            {"q": "Que signifie ETF ?", "r": "Fonds négocié en bourse", "opts": ["Frais de trading", "Fonds négocié en bourse", "Épargne temporaire fixe"]},
+            {"q": "C'est quoi un dividende ?", "r": "Une part des bénéfices reversée aux actionnaires", "opts": ["Une taxe", "Un prêt", "Une part des bénéfices reversée aux actionnaires"]}
+        ]
+        q = random.choice(questions)
+        st.subheader(f"❓ {q['q']}")
+        rep = st.radio("Votre réponse :", q["opts"])
+        if rep:
+            if rep == q["r"]:
+                st.success("Bonne réponse ✅")
+            else:
+                st.error(f"Mauvaise réponse ❌. Bonne réponse : **{q['r']}**")
+
+# ========== 🎯 Score Profil Investisseur ==========
+
+if "📋 Profil Financier" in [tab.label for tab in tabs]:
+    with tabs[0]:
+        if submitted:
+            score = evaluer_profil(age, risque, connaissance)
+            st.markdown(f"### 🎯 **Score investisseur : {score}/5**")
+            if score <= 2:
+                st.warning("Profil prudent : idéal pour obligations ou fonds équilibrés.")
+            elif score <= 4:
+                st.info("Profil modéré : bon équilibre entre actions et obligations.")
+            else:
+                st.success("Profil dynamique : vous pouvez viser des rendements plus élevés.")
+# ========== 📅 Planificateur d'Objectifs ==========
+tabs.append(st.tab("🎯 Objectifs Financiers"))
+with tabs[-1]:
+    st.header("🎯 Planificateur d’Objectifs")
+    objectifs = st.text_area("Listez vos objectifs (un par ligne)", "Acheter une maison\nFinancer les études\nVoyager")
+    if objectifs:
+        objectifs_list = objectifs.split("\n")
+        delais = []
+        for obj in objectifs_list:
+            delais.append(st.slider(f"Combien d'années pour : {obj} ?", 1, 30, 5))
+        st.write("### 🗓️ Résumé :")
+        for o, d in zip(objectifs_list, delais):
+            st.write(f"🔹 **{o}** dans **{d} ans**.")
+
+# ========== 💸 Suivi du Budget Mensuel ==========
+tabs.append(st.tab("💸 Suivi Budget"))
+with tabs[-1]:
+    st.header("💸 Suivi du Budget")
+    revenus = st.number_input("💰 Revenus mensuels ($)", min_value=0)
+    depenses = {
+        "Logement": st.number_input("🏠 Logement", min_value=0),
+        "Nourriture": st.number_input("🍽️ Nourriture", min_value=0),
+        "Transport": st.number_input("🚗 Transport", min_value=0),
+        "Divertissement": st.number_input("🎉 Divertissement", min_value=0),
+        "Autres": st.number_input("🧾 Autres", min_value=0),
+    }
+    total_depenses = sum(depenses.values())
+    reste = revenus - total_depenses
+    st.metric("💼 Épargne potentielle", f"{reste:,.2f} $")
+    fig2, ax2 = plt.subplots()
+    ax2.pie(depenses.values(), labels=depenses.keys(), autopct='%1.1f%%')
+    ax2.axis('equal')
+    st.pyplot(fig2)
+
+# ========== 🔔 Alertes de Portefeuille ==========
+tabs.append(st.tab("🔔 Alertes"))
+with tabs[-1]:
+    st.header("🔔 Alertes personnalisées")
+    valeur_seuil = st.number_input("Déclencher une alerte si la valeur d’un actif descend sous ($)", value=100)
+    actif = st.text_input("Entrez le symbole boursier", value="AAPL")
+    if st.button("Vérifier le seuil"):
+        try:
+            prix_actuel = yf.Ticker(actif).info["currentPrice"]
+            st.write(f"📈 Prix actuel de {actif}: {prix_actuel} $")
+            if prix_actuel < valeur_seuil:
+                st.warning(f"⚠️ {actif} est sous le seuil de {valeur_seuil} $")
+            else:
+                st.success(f"✅ {actif} est au-dessus du seuil.")
+        except:
+            st.error("Erreur lors de la récupération du prix.")
+
+# ========== 🧾 Générateur de Rapport PDF ==========
+from fpdf import FPDF
+import datetime
+
+tabs.append(st.tab("📄 Rapport PDF"))
+with tabs[-1]:
+    st.header("📄 Générateur de Rapport Financier")
+    if st.button("📥 Télécharger mon rapport"):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="Rapport Financier Personnel", ln=True, align="C")
+        pdf.ln(10)
+        pdf.cell(200, 10, txt=f"Date : {datetime.datetime.now().strftime('%d/%m/%Y')}", ln=True)
+        pdf.cell(200, 10, txt=f"Âge : {age}", ln=True)
+        pdf.cell(200, 10, txt=f"Objectif : {objectif}", ln=True)
+        pdf.cell(200, 10, txt=f"Investissement mensuel : {investissement_mensuel} $", ln=True)
+        pdf.cell(200, 10, txt=f"Durée : {duree} ans", ln=True)
+        pdf.output("/tmp/rapport_financier.pdf")
+        with open("/tmp/rapport_financier.pdf", "rb") as f:
+            st.download_button("📤 Télécharger le PDF", f, file_name="rapport_financier.pdf")
+
+# ========== 🌐 Convertisseur de Devises ==========
+import requests
+
+tabs.append(st.tab("💱 Convertisseur de Devises"))
+with tabs[-1]:
+    st.header("💱 Convertisseur")
+    montant = st.number_input("Montant à convertir", value=100.0)
+    from_devise = st.selectbox("De", ["USD", "CAD", "EUR", "GBP"])
+    to_devise = st.selectbox("Vers", ["USD", "CAD", "EUR", "GBP"], index=1)
+    if st.button("Convertir"):
+        try:
+            url = f"https://api.exchangerate.host/convert?from={from_devise}&to={to_devise}&amount={montant}"
+            response = requests.get(url).json()
+            st.success(f"{montant} {from_devise} = {response['result']:.2f} {to_devise}")
+        except:
+            st.error("Erreur lors de la conversion.")
