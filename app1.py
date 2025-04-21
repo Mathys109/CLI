@@ -12,7 +12,7 @@ st.set_page_config(page_title="Gestion Financière", layout="wide")
 # Menu latéral
 st.sidebar.header("Navigation")
 page = st.sidebar.selectbox("Choisir une section", 
-                           ["Calculateur d'Intérêts", "Portefeuille", "Watchlist", "Informations Financières", "Profil Financier"])
+                           ["Calculateur d'Intérêts", "Portefeuille", "Watchlist", "Informations Financières"])
 
 # Fonction pour calculer les intérêts composés
 def calculer_capital(montant, taux, duree, type_invest="Actions"):
@@ -52,38 +52,6 @@ def trouver_symbole(nom_ou_symbole):
 
 # Suggestions d'actifs populaires
 suggestions = ["AAPL", "MSFT", "TSLA", "GOOGL", "AMZN", "VTI", "SPY", "XIC.TO", "QQQ"]
-
-# Création du Profil Financier
-def creer_profil():
-    st.title("📝 Profil Financier")
-
-    age = st.number_input("Quel est votre âge ?", min_value=18, max_value=100, value=30, step=1)
-    but = st.selectbox("Quel est votre objectif d'investissement ?", ["Retraite", "Achat immobilier", "Éducation", "Autre"])
-    horizon_temps = st.selectbox("Quel est votre horizon d'investissement ?", ["Moins de 1 an", "1 à 5 ans", "5 ans et plus"])
-    risque = st.selectbox("Quelle est votre tolérance au risque ?", ["Faible", "Modéré", "Élevé"])
-    montant = st.number_input("Combien souhaitez-vous investir en $ ?", min_value=100, value=1000, step=100)
-
-    # Calculer le profil en fonction des réponses
-    if st.button("Obtenir des suggestions"):
-        # Exemple de logique de suggestion
-        suggestions = []
-        if risque == "Faible":
-            suggestions.append("ETF Obligations")
-            if horizon_temps == "5 ans et plus":
-                suggestions.append("ETF Actions de dividendes")
-        elif risque == "Modéré":
-            suggestions.append("ETF large marché")
-            if horizon_temps == "5 ans et plus":
-                suggestions.append("Actions de grandes entreprises")
-        else:
-            suggestions.append("Actions de croissance")
-            if horizon_temps == "5 ans et plus":
-                suggestions.append("Technologie")
-        
-        # Affichage des suggestions
-        st.subheader("💡 Suggestions d'investissement basées sur votre profil :")
-        for suggestion in suggestions:
-            st.write(f"- {suggestion}")
 
 # Section 1 : Calculateur d'Intérêts Composés
 if page == "Calculateur d'Intérêts":
@@ -161,10 +129,33 @@ elif page == "Portefeuille":
         st.session_state.portefeuille["Valeur Totale"] = st.session_state.portefeuille["Quantité"] * st.session_state.portefeuille["Valeur Actuelle"]
         st.session_state.portefeuille["Profit/Perte"] = (st.session_state.portefeuille["Valeur Actuelle"] - st.session_state.portefeuille["Prix Achat"]) * st.session_state.portefeuille["Quantité"]
 
+        # Édition d’un actif existant
+        st.subheader("✏️ Modifier un placement existant")
+        actif_a_modifier = st.selectbox("Sélectionner un actif à modifier", st.session_state.portefeuille["Actif"].tolist())
+        if actif_a_modifier:
+            row_index = st.session_state.portefeuille[st.session_state.portefeuille["Actif"] == actif_a_modifier].index[0]
+            nouvelle_quantite = st.number_input("Nouvelle quantité", min_value=0.0, value=float(st.session_state.portefeuille.at[row_index, "Quantité"]), step=1.0)
+            nouveau_prix = st.number_input("Nouveau prix d'achat", min_value=0.0, value=float(st.session_state.portefeuille.at[row_index, "Prix Achat"]), step=0.1)
+            if st.button("Mettre à jour ce placement"):
+                st.session_state.portefeuille.at[row_index, "Quantité"] = nouvelle_quantite
+                st.session_state.portefeuille.at[row_index, "Prix Achat"] = nouveau_prix
+                st.success(f"{actif_a_modifier} mis à jour avec succès.")
+
         st.dataframe(st.session_state.portefeuille.style.format({
             "Prix Achat": "${:.2f}", "Valeur Actuelle": "${:.2f}",
             "Valeur Totale": "${:,.2f}", "Profit/Perte": "${:,.2f}"
         }))
+
+        repartition = st.session_state.portefeuille.groupby("Type")["Valeur Totale"].sum()
+        fig, ax = plt.subplots()
+        ax.pie(repartition, labels=repartition.index, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')
+        st.pyplot(fig)
+
+        actif_a_supprimer = st.selectbox("Supprimer un actif", st.session_state.portefeuille["Actif"].tolist())
+        if st.button("Supprimer"):
+            st.session_state.portefeuille = st.session_state.portefeuille[st.session_state.portefeuille["Actif"] != actif_a_supprimer]
+            st.success(f"{actif_a_supprimer} a été supprimé du portefeuille.")
 
 # Section 3 : Watchlist
 elif page == "Watchlist":
@@ -182,36 +173,117 @@ elif page == "Watchlist":
         st.subheader("Ma Watchlist")
         data = {}
         risques = []
-        for sym in st.session_state.watchlist:
+        for symbole in st.session_state.watchlist:
             try:
-                actif = yf.Ticker(sym)
-                info = actif.info
-                hist = actif.history(period="1d")
-                if not hist.empty:
-                    data[sym] = hist["Close"].iloc[-1]
-                    volatilite, var = calculer_risque(hist)
-                    risques.append((sym, volatilite, var))
+                actif = yf.Ticker(symbole)
+                hist = actif.history(period="1y")
+                if hist.empty:
+                    raise ValueError("Aucune donnée disponible")
+                data[symbole] = hist["Close"].iloc[-1]
+                volatilite, var = calculer_risque(hist["Close"])
+                risques.append({"Volatilité (annuelle)": volatilite, "VaR (95%)": var})
+            except:
+                data[symbole] = "N/A"
+                risques.append({"Volatilité (annuelle)": "N/A", "VaR (95%)": "N/A"})
+
+        watch_df = pd.DataFrame(list(data.items()), columns=["Symbole", "Prix Actuel"])
+        risque_df = pd.DataFrame(risques)
+        watch_complet = pd.concat([watch_df, risque_df], axis=1)
+        st.dataframe(watch_complet.style.format({
+            "Prix Actuel": lambda x: "N/A" if x == "N/A" else "${:.2f}".format(x),
+            "Volatilité (annuelle)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x),
+            "VaR (95%)": lambda x: "N/A" if x == "N/A" else "{:.2%}".format(x)
+        }))
+
+        watch_data = pd.DataFrame()
+        for symbole in st.session_state.watchlist:
+            try:
+                hist = yf.Ticker(symbole).history(period="1y")["Close"]
+                watch_data[symbole] = hist
             except:
                 pass
-        st.write(data)
-        if risques:
-            st.write("Volatilité et VaR des actifs:")
-            for risk in risques:
-                st.write(f"{risk[0]} : Volatilité = {risk[1]}, VaR = {risk[2]}")
+        if not watch_data.empty:
+            st.line_chart(watch_data)
+
+        symbole_suppr = st.selectbox("Supprimer un symbole de la watchlist", st.session_state.watchlist)
+        if st.button("Supprimer le symbole"):
+            st.session_state.watchlist.remove(symbole_suppr)
+            st.success(f"{symbole_suppr} supprimé de la watchlist.")
 
 # Section 4 : Informations Financières
 elif page == "Informations Financières":
-    st.title("📚 Informations Financières")
-    st.write("### Qu'est-ce qu'un ETF ?")
-    st.write("""
-        Un ETF (Exchange Traded Fund) est un fonds d'investissement coté en bourse qui suit un indice, une matière première, un secteur, ou un groupe d'actifs. 
-        Il permet aux investisseurs d'obtenir une exposition diversifiée tout en ayant une liquidité élevée, étant donné qu'il peut être acheté et vendu comme une action.
-    """)
-    st.write("### Quelle est la différence entre une action et une obligation ?")
-    st.write("""
-        Une action représente une part de propriété dans une entreprise, tandis qu'une obligation est un instrument de dette où l'investisseur prête de l'argent à une entreprise ou un gouvernement en échange de paiements d'intérêts.
-    """)
+    st.title("ℹ️ Informations Financières")
 
-# Section 5 : Profil Financier
-elif page == "Profil Financier":
+    symbole = st.text_input("Entrez un symbole (ex: AAPL)")
+    if symbole:
+        try:
+            actif = yf.Ticker(symbole.upper())
+            info = actif.info
+            st.subheader(f"{info['longName']} ({symbole.upper()})")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Secteur** : {info.get('sector', 'N/A')}")
+                st.write(f"**Prix actuel** : ${info.get('currentPrice', 'N/A'):.2f}")
+                st.write(f"**Capitalisation** : ${info.get('marketCap', 0):,.0f}")
+            with col2:
+                st.write(f"**PER** : {info.get('trailingPE', 'N/A'):.2f}")
+                st.write(f"**Dividende** : {info.get('dividendYield', 0) * 100:.2f}%")
+                st.write(f"**52 semaines** : ${info.get('fiftyTwoWeekLow', 0):.2f} - ${info.get('fiftyTwoWeekHigh', 0):.2f}")
+
+            hist = actif.history(period="1y")
+            if not hist.empty:
+                volatilite, var = calculer_risque(hist["Close"])
+                st.write(f"**Volatilité (annuelle)** : {'N/A' if volatilite == 'N/A' else f'{volatilite:.2%}'}")
+                st.write(f"**VaR (95%)** : {'N/A' if var == 'N/A' else f'{var:.2%}'} (perte potentielle max sur 1 jour)")
+
+            periode = st.selectbox("Période", ["1mo", "6mo", "1y", "5y"])
+            hist = actif.history(period=periode)
+            if not hist.empty:
+                st.line_chart(hist["Close"].rename(f"Historique {symbole.upper()} ({periode})"))
+        except Exception as e:
+            st.error(f"Erreur : {str(e)}")
+
+# Footer
+st.sidebar.markdown("---")
+st.sidebar.write(f"Date : {datetime.now().strftime('%Y-%m-%d')}")
+
+# Section 5 :Profil financier
+def creer_profil():
+    st.title("📝 Profil Financier")
+
+    age = st.number_input("Quel est votre âge ?", min_value=18, max_value=100, value=30, step=1)
+    but = st.selectbox("Quel est votre objectif d'investissement ?", ["Retraite", "Achat immobilier", "Éducation", "Autre"])
+    horizon_temps = st.selectbox("Quel est votre horizon d'investissement ?", ["Moins de 1 an", "1 à 5 ans", "5 ans et plus"])
+    risque = st.selectbox("Quelle est votre tolérance au risque ?", ["Faible", "Modéré", "Élevé"])
+    montant = st.number_input("Combien souhaitez-vous investir en $ ?", min_value=100, value=1000, step=100)
+
+    # Calculer le profil en fonction des réponses
+    if st.button("Obtenir des suggestions"):
+        # Exemple de logique de suggestion
+        suggestions = []
+        if risque == "Faible":
+            suggestions.append("ETF Obligations")
+            if horizon_temps == "5 ans et plus":
+                suggestions.append("ETF Actions de dividendes")
+        elif risque == "Modéré":
+            suggestions.append("ETF large marché")
+            if horizon_temps == "5 ans et plus":
+                suggestions.append("Actions de grandes entreprises")
+        else:
+            suggestions.append("Actions de croissance")
+            if horizon_temps == "5 ans et plus":
+                suggestions.append("Technologie")
+        
+        # Affichage des suggestions
+        st.subheader("💡 Suggestions d'investissement basées sur votre profil :")
+        for suggestion in suggestions:
+            st.write(f"- {suggestion}")
+
+# Intégrer la section dans ton menu
+page = st.sidebar.selectbox("Choisir une section", 
+                           ["Calculateur d'Intérêts", "Portefeuille", "Watchlist", "Informations Financières", "Profil Financier"])
+
+if page == "Profil Financier":
     creer_profil()
+
