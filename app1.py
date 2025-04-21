@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
 import numpy as np
-from statsmodels.tsa.arima.model import ARIMA
 from fpdf import FPDF
 
 # Configuration de la page Streamlit
@@ -221,19 +220,6 @@ data = {
     'y': np.random.normal(0, 1, 365).cumsum()  # Données aléatoires pour l'exemple
 }
 df = pd.DataFrame(data)
-
-# Ajustement du modèle ARIMA
-model = ARIMA(df['y'], order=(5, 1, 0))  # (p, d, q)
-model_fit = model.fit()
-
-# Prévisions
-forecast_steps = 365
-forecast = model_fit.forecast(steps=forecast_steps)
-
-# Visualisation des prévisions
-st.header("🔮 Prévisions avec ARIMA")
-st.write(f"Prévisions pour les {forecast_steps} prochains jours.")
-st.line_chart(forecast)
 
 # Génération de rapport PDF
 with tabs[11]:
