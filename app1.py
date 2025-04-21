@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
 import numpy as np
-from fbprophet import Prophet
+from prophet import Prophet
 from fpdf import FPDF
 
 # Configuration de la page Streamlit
