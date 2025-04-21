@@ -1,198 +1,118 @@
-# app.py
 import streamlit as st
 import pandas as pd
-import yfinance as yf
-import numpy as np
-from datetime import datetime
 import matplotlib.pyplot as plt
 
-# Configuration de la page
-st.set_page_config(page_title="Gestion Financière", layout="wide")
+st.set_page_config(page_title="Conseiller Financier Virtuel", layout="wide")
 
-# Fonction pour calculer les intérêts composés
-def calculer_capital(montant, taux, duree, type_invest="Actions"):
-    capital = 0
-    evolution = []
-    for annee in range(1, duree + 1):
-        taux_ajuste = taux / 100 * (1.2 if type_invest == "Actions" else 0.8)
-        capital = (capital + montant) * (1 + taux_ajuste)
-        evolution.append((annee, round(capital, 2)))
-    return pd.DataFrame(evolution, columns=["Année", "Capital accumulé"])
+st.title("💼 Conseiller Financier Virtuel")
 
-# Fonction pour calculer la volatilité et la VaR
-def calculer_risque(historique):
-    try:
-        rendements = historique.pct_change().dropna()
-        if len(rendements) < 2:
-            return "N/A", "N/A"
-        volatilite = rendements.std() * np.sqrt(252)
-        var = np.percentile(rendements, 5)
-        return volatilite, var
-    except:
-        return "N/A", "N/A"
+# Onglets pour organiser l'application
+tabs = st.tabs(["Profil Financier", "Suggestions de Portefeuille", "Simulateur de Rendement", "Comparateur de Fonds", "FAQ"])
 
-# Suggestions d'actifs populaires
-suggestions = ["AAPL", "MSFT", "TSLA", "GOOGL", "AMZN", "VTI", "SPY", "XIC.TO", "QQQ"]
-
-# Onglets principaux
-onglets = st.tabs(["👤 Profil Financier", "💰 Intérêts Composés", "📊 Portefeuille", "👀 Watchlist", "ℹ️ Infos Financières"])
-
-# Onglet 1 : Profil Financier
-with onglets[0]:
-    st.header("👤 Créez votre Profil Financier")
+# ------------------------
+# 1. PROFIL FINANCIER
+# ------------------------
+with tabs[0]:
+    st.header("📋 Profil Financier")
     with st.form("profil_form"):
-        nom = st.text_input("Votre nom")
-        age = st.number_input("Âge", min_value=18, value=30)
-        revenu = st.number_input("Revenu annuel ($)", min_value=0.0, step=1000.0)
-        objectif = st.selectbox("Objectif d'investissement", ["Retraite", "Croissance du capital", "Revenu stable", "Projet à court terme"])
-        horizon = st.slider("Horizon de placement (années)", 1, 50, 10)
-        risque = st.radio("Tolérance au risque", ["Faible", "Moyenne", "Élevée"])
-        soumettre = st.form_submit_button("Analyser mon profil")
+        col1, col2 = st.columns(2)
+        with col1:
+            age = st.number_input("Âge", min_value=18, max_value=100, value=30)
+            objectif = st.selectbox("Objectif d'investissement", ["Épargne retraite", "Achat maison", "Voyage", "Revenus passifs", "Autre"])
+            montant_initial = st.number_input("Montant disponible à investir maintenant ($)", min_value=0)
+            investissement_mensuel = st.number_input("Montant investi chaque mois ($)", min_value=0)
+            duree = st.slider("Durée de l'investissement (en années)", 1, 50, 10)
+        with col2:
+            risque = st.select_slider("Tolérance au risque", options=["Faible", "Modérée", "Élevée"])
+            situation_familiale = st.selectbox("Situation familiale", ["Célibataire", "Marié(e)", "Avec enfants", "Sans enfants"])
+            epargne_urgence = st.radio("Avez-vous une épargne d'urgence?", ["Oui", "Non"])
+            preference_esg = st.checkbox("Je préfère des investissements responsables (ESG)")
 
-    if soumettre:
-        st.success(f"Merci {nom}, voici quelques recommandations :")
-        if risque == "Faible":
-            st.write("\n🔹 Portefeuille défensif suggéré : FNB obligataires (ZAG), actions stables (BCE, ENB), FNB de dividendes (VDY)")
-        elif risque == "Moyenne":
-            st.write("\n🔹 Portefeuille équilibré suggéré : FNB diversifiés (VGRO), actions solides (AAPL, MSFT), obligations")
-        else:
-            st.write("\n🔹 Portefeuille dynamique suggéré : Tech (TSLA, NVDA), croissance (ARKK), crypto ou émergents")
+        submitted = st.form_submit_button("Analyser mon profil")
 
-        st.info("Ces suggestions sont basées sur votre horizon et tolérance au risque. Consultez un conseiller pour des conseils personnalisés.")
+    if submitted:
+        st.success("✅ Profil analysé avec succès!")
+        st.write("### Résumé de votre profil :")
+        st.json({
+            "Âge": age,
+            "Objectif": objectif,
+            "Montant initial": montant_initial,
+            "Investissement mensuel": investissement_mensuel,
+            "Durée": duree,
+            "Tolérance au risque": risque,
+            "Situation familiale": situation_familiale,
+            "Épargne d'urgence": epargne_urgence,
+            "Préférence ESG": preference_esg
+        })
 
-# Onglet 2 : Calculateur d'intérêts composés
-with onglets[1]:
-    st.header("💰 Calculateur d'Intérêts Composés")
-    col1, col2 = st.columns(2)
-    with col1:
-        montant_annuel = st.number_input("Montant investi par an ($)", min_value=0.0, value=1000.0, step=100.0)
-        taux_interet = st.number_input("Taux d'intérêt annuel (%)", min_value=0.0, value=5.0, step=0.1)
-    with col2:
-        annees = st.number_input("Nombre d'années", min_value=1, value=10, step=1)
-        type_invest = st.selectbox("Type d'investissement", ["Actions", "Obligations"])
+# ------------------------
+# 2. SUGGESTIONS DE PORTEFEUILLE
+# ------------------------
+with tabs[1]:
+    st.header("📊 Suggestions de Portefeuille")
+    st.markdown("Voici un exemple de répartition suggérée :")
 
-    if st.button("Calculer"):
-        df = calculer_capital(montant_annuel, taux_interet, annees, type_invest)
-        st.subheader("📈 Évolution du capital")
-        st.dataframe(df.style.format({"Capital accumulé": "${:,.2f}"}))
-        st.line_chart(df.set_index("Année")[["Capital accumulé"]])
-        total = df["Capital accumulé"].iloc[-1]
-        st.success(f"Capital final après {annees} ans : ${total:,.2f}")
-        csv = df.to_csv(index=False)
-        st.download_button("Télécharger les données", csv, "evolution_capital.csv", "text/csv")
+    labels = ["Actions canadiennes", "Actions internationales", "Obligations", "Fonds ESG"]
+    if risque == "Faible":
+        sizes = [20, 20, 50, 10]
+    elif risque == "Modérée":
+        sizes = [35, 35, 20, 10]
+    else:
+        sizes = [50, 35, 5, 10]
 
-# Onglet 3 : Portefeuille
-with onglets[2]:
-    st.header("📊 Mon Portefeuille")
-    if "portefeuille" not in st.session_state:
-        st.session_state.portefeuille = pd.DataFrame(columns=["Actif", "Type", "Quantité", "Prix Achat", "Valeur Actuelle"])
+    fig, ax = plt.subplots()
+    ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')
+    st.pyplot(fig)
 
-    with st.form(key="ajout_actif"):
-        recherche = st.text_input("Nom ou symbole du placement")
-        quantite = st.number_input("Quantité", min_value=0.0, step=1.0)
-        bouton_ajouter = st.form_submit_button("Ajouter")
-        if bouton_ajouter and recherche:
-            try:
-                symbole_final = recherche.strip().upper()
-                actif = yf.Ticker(symbole_final)
-                info = actif.info
-                hist = actif.history(period="1d")
-                if hist.empty:
-                    raise ValueError("Aucune donnée disponible")
-                prix_actuel = hist["Close"].iloc[-1]
-                prix_achat = prix_actuel
-                secteur = info.get("sector", "")
-                if "ETF" in info.get("quoteType", "").upper() or "ETF" in info.get("longName", "").upper():
-                    type_actif = "FNB"
-                elif secteur == "Financial Services" or "BOND" in info.get("longName", "").upper():
-                    type_actif = "Obligations"
-                else:
-                    type_actif = "Actions"
-                new_row = {"Actif": symbole_final, "Type": type_actif, "Quantité": quantite, "Prix Achat": prix_achat, "Valeur Actuelle": prix_actuel}
-                st.session_state.portefeuille = pd.concat([st.session_state.portefeuille, pd.DataFrame([new_row])], ignore_index=True)
-                st.success(f"{symbole_final} ajouté au portefeuille !")
-            except Exception as e:
-                st.error(f"Erreur : {str(e)}")
+# ------------------------
+# 3. SIMULATEUR DE RENDEMENT
+# ------------------------
+with tabs[2]:
+    st.header("📈 Simulateur de Rendement")
+    taux = st.slider("Taux de rendement annuel (%)", 1, 15, 5)
+    capital = montant_initial
+    historique = []
+    for annee in range(duree):
+        capital = capital * (1 + taux / 100) + 12 * investissement_mensuel
+        historique.append(capital)
 
-    if not st.session_state.portefeuille.empty:
-        st.subheader("📈 Composition du portefeuille")
-        if st.button("🔄 Mettre à jour les données"):
-            for i, row in st.session_state.portefeuille.iterrows():
-                try:
-                    hist = yf.Ticker(row["Actif"]).history(period="1d")
-                    if not hist.empty:
-                        st.session_state.portefeuille.at[i, "Valeur Actuelle"] = hist["Close"].iloc[-1]
-                except:
-                    pass
+    st.line_chart(historique)
+    st.metric("Montant estimé à terme", f"{capital:,.2f} $")
 
-        df = st.session_state.portefeuille
-        df["Valeur Totale"] = df["Quantité"] * df["Valeur Actuelle"]
-        df["Profit/Perte"] = (df["Valeur Actuelle"] - df["Prix Achat"]) * df["Quantité"]
-        st.dataframe(df.style.format({"Prix Achat": "${:.2f}", "Valeur Actuelle": "${:.2f}", "Valeur Totale": "${:,.2f}", "Profit/Perte": "${:,.2f}"}))
+# ------------------------
+# 4. COMPARATEUR DE FONDS
+# ------------------------
+with tabs[3]:
+    st.header("🔍 Comparateur de Fonds")
+    fond1 = st.selectbox("Choisir un premier fonds", ["VEQT", "XEQT", "VCNS", "VGRO"])
+    fond2 = st.selectbox("Choisir un deuxième fonds", ["VEQT", "XEQT", "VCNS", "VGRO"], index=1)
 
-# Onglet 4 : Watchlist
-with onglets[3]:
-    st.header("👀 Ma Watchlist")
-    if "watchlist" not in st.session_state:
-        st.session_state.watchlist = []
+    donnees_fonds = {
+        "VEQT": {"Rendement moyen": "8%", "Risque": "Élevé", "Frais": "0.25%"},
+        "XEQT": {"Rendement moyen": "7.8%", "Risque": "Élevé", "Frais": "0.20%"},
+        "VCNS": {"Rendement moyen": "5%", "Risque": "Faible", "Frais": "0.25%"},
+        "VGRO": {"Rendement moyen": "6.5%", "Risque": "Modéré", "Frais": "0.25%"},
+    }
 
-    symbole = st.text_input("Ajouter un symbole à la watchlist")
-    if st.button("Ajouter") and symbole:
-        st.session_state.watchlist.append(symbole.upper())
-        st.success(f"{symbole.upper()} ajouté à la watchlist !")
+    st.write(f"### 📌 {fond1}")
+    st.json(donnees_fonds[fond1])
+    st.write(f"### 📌 {fond2}")
+    st.json(donnees_fonds[fond2])
 
-    if st.session_state.watchlist:
-        st.subheader("Liste de surveillance")
-        data = {}
-        risques = []
-        for symbole in st.session_state.watchlist:
-            try:
-                actif = yf.Ticker(symbole)
-                hist = actif.history(period="1y")
-                if hist.empty:
-                    raise ValueError("Aucune donnée disponible")
-                data[symbole] = hist["Close"].iloc[-1]
-                volatilite, var = calculer_risque(hist["Close"])
-                risques.append({"Volatilité (annuelle)": volatilite, "VaR (95%)": var})
-            except:
-                data[symbole] = "N/A"
-                risques.append({"Volatilité (annuelle)": "N/A", "VaR (95%)": "N/A"})
+# ------------------------
+# 5. FAQ
+# ------------------------
+with tabs[4]:
+    st.header("❓ Questions fréquentes")
+    with st.expander("C'est quoi un ETF?"):
+        st.write("Un ETF (Exchange Traded Fund) est un fonds qui regroupe plusieurs actifs, comme des actions ou des obligations, et qui se transige en bourse comme une action.")
 
-        watch_df = pd.DataFrame(list(data.items()), columns=["Symbole", "Prix Actuel"])
-        risque_df = pd.DataFrame(risques)
-        st.dataframe(pd.concat([watch_df, risque_df], axis=1))
+    with st.expander("Comment fonctionne le risque?"):
+        st.write("Plus le rendement espéré est élevé, plus le risque de pertes est grand. C’est pourquoi il faut bien connaître son profil d’investisseur.")
 
-# Onglet 5 : Infos Financières
-with onglets[4]:
-    st.header("ℹ️ Informations Financières")
-    symbole = st.text_input("Entrez un symbole pour voir les infos")
-    if symbole:
-        try:
-            actif = yf.Ticker(symbole.upper())
-            info = actif.info
-            st.subheader(f"{info.get('longName', symbole.upper())} ({symbole.upper()})")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Secteur** : {info.get('sector', 'N/A')}")
-                st.write(f"**Prix actuel** : ${info.get('currentPrice', 0):.2f}")
-                st.write(f"**Capitalisation** : ${info.get('marketCap', 0):,.0f}")
-            with col2:
-                st.write(f"**PER** : {info.get('trailingPE', 'N/A')}")
-                st.write(f"**Dividende** : {info.get('dividendYield', 0) * 100:.2f}%")
-                st.write(f"**52 semaines** : ${info.get('fiftyTwoWeekLow', 0):.2f} - ${info.get('fiftyTwoWeekHigh', 0):.2f}")
+    with st.expander("À quelle fréquence investir?"):
+        st.write("Investir de manière périodique (ex: chaque mois) permet de réduire le risque en lissant les fluctuations du marché.")
 
-            hist = actif.history(period="1y")
-            if not hist.empty:
-                volatilite, var = calculer_risque(hist["Close"])
-                st.write(f"**Volatilité (annuelle)** : {'N/A' if volatilite == 'N/A' else f'{volatilite:.2%}'}")
-                st.write(f"**VaR (95%)** : {'N/A' if var == 'N/A' else f'{var:.2%}'}")
-
-                periode = st.selectbox("Période du graphique", ["1mo", "6mo", "1y", "5y"])
-                hist = actif.history(period=periode)
-                st.line_chart(hist["Close"].rename(f"Historique {symbole.upper()} ({periode})"))
-        except Exception as e:
-            st.error(f"Erreur : {str(e)}")
-
-# Footer
-date_str = datetime.now().strftime('%Y-%m-%d')
-st.markdown(f"---\n<sub>Dernière mise à jour : {date_str}</sub>", unsafe_allow_html=True)
+    with st.expander("Faut-il avoir une épargne d’urgence?"):
+        st.write("Oui, avant d’investir à long terme, il est important d’avoir un coussin d’épargne équivalent à 3 à 6 mois de dépenses.")
