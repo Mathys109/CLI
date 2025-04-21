@@ -22,8 +22,6 @@ tabs = st.tabs([
     "Glossaire",
     "Watchlist",
     "Simulation Monte Carlo",
-    "Prévisions avec Prophet",
-    "Générer un rapport PDF",
     "Quiz Financier",
     "Cryptomonnaie"
 ])
