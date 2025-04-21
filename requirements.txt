@@ -6,3 +6,4 @@ matplotlib
 fbprophet
 prophet
 statsmodels.tsa.arima.model
+fpdf
