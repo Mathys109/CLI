@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
 import numpy as np
-from prophet import Prophet
+from prophet import Pt
 from fpdf import FPDF
 
 # Configuration de la page Streamlit
@@ -228,7 +228,7 @@ with tabs[10]:
     df = pd.DataFrame(data)
 
     # Modélisation avec Prophet
-    model = Prophet()
+    model = Pt()
     model.fit(df)
     future = model.make_future_dataframe(df, periods=365)
     forecast = model.predict(future)
